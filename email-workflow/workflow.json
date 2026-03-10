@@ -4,24 +4,21 @@
 
     {
       "id": "a1b2c3d4-0001-4000-8000-000000000001",
-      "name": "Email Trigger — seveso@tempocasa.it",
-      "type": "n8n-nodes-base.emailReadImap",
-      "typeVersion": 2,
+      "name": "Gmail Trigger — seveso@tempocasa.it",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
       "position": [240, 300],
       "parameters": {
-        "mailbox": "INBOX",
-        "action": "read",
-        "downloadAttachments": false,
-        "format": "both",
-        "options": {
-          "allowUnauthorizedCerts": false,
-          "fetchUnread": true
-        }
+        "simple": false,
+        "filters": {
+          "readStatus": "unread"
+        },
+        "options": {}
       },
       "credentials": {
-        "imap": {
-          "id": "REPLACE_IMAP_CREDENTIAL_ID",
-          "name": "seveso@tempocasa.it"
+        "gmailOAuth2": {
+          "id": "REPLACE_GMAIL_CREDENTIAL_ID",
+          "name": "seveso@tempocasa.it Gmail"
         }
       }
     },
@@ -33,7 +30,7 @@
       "typeVersion": 2,
       "position": [500, 300],
       "parameters": {
-        "jsCode": "// Strip HTML tags and normalize whitespace\nconst item = $input.first().json;\n\nconst html  = item.html  || '';\nconst plain = item.text  || '';\n\nfunction stripHtml(h) {\n  return h\n    .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n    .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/p>/gi, '\\n')\n    .replace(/<\\/div>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&amp;/g, '&')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .replace(/&#39;/g, \"'\")\n    .replace(/\\s{3,}/g, '\\n\\n')\n    .trim();\n}\n\nconst body = plain || (html ? stripHtml(html) : '');\n\nconst from = (\n  item.from?.value?.[0]?.address ||\n  item.from?.text ||\n  item.from ||\n  ''\n);\n\nreturn [{\n  json: {\n    subject:    item.subject || '(no subject)',\n    from:       from,\n    body:       body.slice(0, 3000),  // cap to avoid huge prompts\n    receivedAt: item.date || new Date().toISOString(),\n    messageId:  item.messageId || ''\n  }\n}];"
+        "jsCode": "// Gmail API returns base64url-encoded body and headers as [{name,value}] array\nconst item = $input.first().json;\n\n// --- helpers ---\nfunction decodeBase64url(str) {\n  if (!str) return '';\n  // Gmail uses base64url: replace - with + and _ with /\n  const base64 = str.replace(/-/g, '+').replace(/_/g, '/');\n  return Buffer.from(base64, 'base64').toString('utf-8');\n}\n\nfunction stripHtml(h) {\n  return h\n    .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n    .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/p>/gi, '\\n')\n    .replace(/<\\/div>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&amp;/g, '&')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .replace(/&#39;/g, \"'\")\n    .replace(/\\s{3,}/g, '\\n\\n')\n    .trim();\n}\n\n// Recursively walk payload.parts to find text/plain and text/html\nfunction extractBody(payload) {\n  if (!payload) return '';\n  let textBody = '';\n  let htmlBody = '';\n\n  // Non-multipart: body is directly on payload\n  if (payload.body && payload.body.data) {\n    const decoded = decodeBase64url(payload.body.data);\n    if (payload.mimeType === 'text/plain') textBody = decoded;\n    else htmlBody = decoded;\n  }\n\n  function walkParts(parts) {\n    if (!parts) return;\n    for (const part of parts) {\n      if (part.mimeType === 'text/plain' && part.body && part.body.data) {\n        textBody = textBody || decodeBase64url(part.body.data);\n      } else if (part.mimeType === 'text/html' && part.body && part.body.data) {\n        htmlBody = htmlBody || decodeBase64url(part.body.data);\n      }\n      // Recurse into nested multipart\n      if (part.parts) walkParts(part.parts);\n    }\n  }\n  walkParts(payload.parts);\n\n  return textBody || (htmlBody ? stripHtml(htmlBody) : '');\n}\n\n// Flatten Gmail headers array → plain object\nconst hdr = {};\n(item.payload && item.payload.headers || []).forEach(h => {\n  hdr[h.name.toLowerCase()] = h.value;\n});\n\nconst subject = hdr['subject'] || '(no subject)';\nconst from    = hdr['from']    || '';\nconst date    = hdr['date']    || new Date().toISOString();\nconst body    = extractBody(item.payload) || item.snippet || '';\n\nreturn [{\n  json: {\n    subject,\n    from,\n    body:       body.slice(0, 3000),\n    receivedAt: date,\n    messageId:  item.id || ''\n  }\n}];"
       }
     },
 
@@ -240,7 +237,7 @@
   ],
 
   "connections": {
-    "Email Trigger — seveso@tempocasa.it": {
+    "Gmail Trigger — seveso@tempocasa.it": {
       "main": [[{ "node": "Prepara Testo Email", "type": "main", "index": 0 }]]
     },
     "Prepara Testo Email": {

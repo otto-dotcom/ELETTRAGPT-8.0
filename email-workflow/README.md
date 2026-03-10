@@ -53,15 +53,18 @@ actual email formats. Adjust the prompt in `workflow.json` → node
 
 You need three credentials:
 
-#### A) IMAP — `seveso@tempocasa.it`
-- Type: **IMAP**
-- Host: `mail.tempocasa.it` (or your mail server)
-- Port: `993`
-- User: `seveso@tempocasa.it`
-- Password: (email password)
-- SSL: on
-- After saving, paste the credential ID into the **Email Trigger** node
-  (`REPLACE_IMAP_CREDENTIAL_ID`)
+#### A) Gmail OAuth2 — `seveso@tempocasa.it`
+- Type: **Gmail OAuth2**
+- Follow n8n's OAuth2 setup (you'll need a Google Cloud project with
+  the Gmail API enabled and OAuth 2.0 credentials)
+- Scope needed: `https://www.googleapis.com/auth/gmail.readonly`
+  (read-only — the workflow never modifies emails)
+- After connecting, paste the credential ID into the **Gmail Trigger** node
+  (`REPLACE_GMAIL_CREDENTIAL_ID`)
+
+> Google Cloud setup: console.cloud.google.com → APIs & Services →
+> Enable Gmail API → Credentials → OAuth 2.0 Client ID (Web app) →
+> Add n8n's redirect URI → copy Client ID + Secret into n8n
 
 #### B) Anthropic API Key
 - Type: **HTTP Header Auth**
