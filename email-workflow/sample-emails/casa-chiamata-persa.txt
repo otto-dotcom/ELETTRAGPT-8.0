@@ -1,0 +1,24 @@
+PORTAL  : casa
+TYPE    : chiamata_persa
+FROM    : noreply@casa.it
+SUBJECT : Chiamata persa — annuncio Via dei Tigli 3, Meda
+────────────────────────────────────────────────────────────
+
+casa.it — Notifica chiamata persa
+
+Un utente ha tentato di contattarvi tramite il numero anonimizzato
+di casa.it ma la linea era occupata o irraggiungibile.
+
+Annuncio: Monolocale — Via dei Tigli 3, Meda (MB)
+ID annuncio: CSA-0005678
+
+Chiamante:
+  Nome:    Roberto Sala
+  Numero:  338 8901234
+
+Orario tentativo: 14:32 del 10/03/2024
+
+Richiamate questo numero per non perdere il contatto.
+
+---
+© casa.it

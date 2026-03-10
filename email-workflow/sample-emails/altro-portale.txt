@@ -1,0 +1,19 @@
+PORTAL  : altro
+TYPE    : richiesta
+FROM    : info@subito.it
+SUBJECT : Richiesta per il tuo annuncio su Subito.it
+────────────────────────────────────────────────────────────
+
+Esempio di email da portale non mappato (Subito.it, wikicasa.it, ecc.)
+Queste finiscono nel bucket "Altro" di Trello.
+
+Annuncio: Appartamento 3 locali — Seveso
+Codice: SUB-998877
+
+Mittente:
+  Nome:  Francesco Negri
+  Tel:   3356789012
+  Email: f.negri@gmail.com
+
+Messaggio:
+Ciao, vi contatto per l'appartamento in affitto. Possiamo parlare?

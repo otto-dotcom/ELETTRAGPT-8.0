@@ -1,0 +1,20 @@
+PORTAL  : immobiliare
+TYPE    : chiamata_persa
+FROM    : notifiche@immobiliare.it
+SUBJECT : Chiamata persa da immobiliare.it — Via Mazzini 5, Cesano Maderno
+────────────────────────────────────────────────────────────
+
+Un utente ha cercato di contattarvi tramite il numero dedicato immobiliare.it
+ma la chiamata non ha avuto risposta.
+
+Annuncio: Trilocale in affitto — Via Mazzini 5, Cesano Maderno (MB) — € 850/mese
+Codice annuncio: 87654321
+
+Dati del chiamante:
+  Nome:     Giulia Bianchi
+  Numero:   347 9876543
+
+Richiamate al più presto per non perdere questo contatto.
+
+---
+www.immobiliare.it

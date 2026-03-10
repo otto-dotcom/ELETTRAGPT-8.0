@@ -1,0 +1,14 @@
+{
+  "name": "tempocasa-email-workflow",
+  "version": "1.0.0",
+  "description": "Fetch & study apartment request emails for TempoCasa Seveso — standalone from main codebase",
+  "scripts": {
+    "fetch-emails": "node fetch-sample-emails.js",
+    "test-parser": "node test-parser.js"
+  },
+  "dependencies": {
+    "imap-simple": "^5.1.0",
+    "mailparser": "^3.7.1",
+    "dotenv": "^16.4.5"
+  }
+}

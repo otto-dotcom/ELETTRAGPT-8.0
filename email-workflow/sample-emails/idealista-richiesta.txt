@@ -1,0 +1,25 @@
+PORTAL  : idealista
+TYPE    : richiesta
+FROM    : info@idealista.it
+SUBJECT : Nuova richiesta di contatto per il tuo annuncio su idealista
+────────────────────────────────────────────────────────────
+
+Hai ricevuto una nuova richiesta di contatto su idealista.it
+
+Immobile: Bilocale — Corso Italia 22, Bovisio Masciago (MB)
+Rif. annuncio: ID-20240315-44921
+
+Il potenziale cliente ha lasciato i seguenti dati:
+
+  Nome e cognome: Luca Ferretti
+  Telefono:       +39 389 4567890
+  Email:          luca.ferretti@libero.it
+
+Messaggio lasciato:
+"Salve, ho visto l'annuncio su idealista. L'appartamento è ancora
+disponibile? Sono interessato soprattutto a sapere se sono incluse
+le spese condominiali nell'affitto mensile. Resto in attesa, grazie."
+
+---
+Per rispondere accedi al tuo profilo su idealista.it
+Non rispondere direttamente a questa email automatica.

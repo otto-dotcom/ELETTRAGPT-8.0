@@ -1,0 +1,283 @@
+{
+  "name": "TempoCasa Seveso — Richieste Appartamenti Email",
+  "nodes": [
+
+    {
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Email Trigger — seveso@tempocasa.it",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "parameters": {
+        "mailbox": "INBOX",
+        "action": "read",
+        "downloadAttachments": false,
+        "format": "both",
+        "options": {
+          "allowUnauthorizedCerts": false,
+          "fetchUnread": true
+        }
+      },
+      "credentials": {
+        "imap": {
+          "id": "REPLACE_IMAP_CREDENTIAL_ID",
+          "name": "seveso@tempocasa.it"
+        }
+      }
+    },
+
+    {
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Prepara Testo Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "parameters": {
+        "jsCode": "// Strip HTML tags and normalize whitespace\nconst item = $input.first().json;\n\nconst html  = item.html  || '';\nconst plain = item.text  || '';\n\nfunction stripHtml(h) {\n  return h\n    .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n    .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/p>/gi, '\\n')\n    .replace(/<\\/div>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&amp;/g, '&')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .replace(/&#39;/g, \"'\")\n    .replace(/\\s{3,}/g, '\\n\\n')\n    .trim();\n}\n\nconst body = plain || (html ? stripHtml(html) : '');\n\nconst from = (\n  item.from?.value?.[0]?.address ||\n  item.from?.text ||\n  item.from ||\n  ''\n);\n\nreturn [{\n  json: {\n    subject:    item.subject || '(no subject)',\n    from:       from,\n    body:       body.slice(0, 3000),  // cap to avoid huge prompts\n    receivedAt: item.date || new Date().toISOString(),\n    messageId:  item.messageId || ''\n  }\n}];"
+      }
+    },
+
+    {
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "Claude — Analisi Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [760, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $credentials.value }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({\n  model: 'claude-opus-4-6',\n  max_tokens: 512,\n  messages: [{\n    role: 'user',\n    content: `Sei un assistente che analizza email di richieste immobiliari per l\\'agenzia TempoCasa Seveso.\\n\\nAnalizza questa email e rispondi SOLO con un oggetto JSON valido, nessun altro testo.\\n\\nCampi richiesti:\\n{\\n  \"portal\": \"immobiliare\" | \"idealista\" | \"casa\" | \"altro\",\\n  \"tipo\": \"richiesta\" | \"chiamata_persa\",\\n  \"nome_cliente\": \"nome cognome o null\",\\n  \"telefono\": \"numero o null\",\\n  \"email_cliente\": \"email o null\",\\n  \"appartamento\": \"descrizione immobile o null\",\\n  \"messaggio\": \"testo messaggio o null\"\\n}\\n\\nRegole:\\n- portal: immobiliare.it -> immobiliare, idealista.it -> idealista, casa.it -> casa, altro -> altro\\n- tipo: chiamata_persa se è notifica chiamata persa, altrimenti richiesta\\n- nome_cliente: solo il nome del cliente potenziale (non dell\\'agenzia)\\n- telefono: numero come appare nell\\'email, null se assente\\n- appartamento: indirizzo, codice annuncio o descrizione dell\\'immobile\\n- messaggio: testo libero del cliente, null se è solo chiamata persa\\n\\n---\\nOggetto: ${$json.subject}\\nMittente: ${$json.from}\\nTesto:\\n${$json.body}\\n---`\n  }]\n}) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ANTHROPIC_CREDENTIAL_ID",
+          "name": "Anthropic API Key"
+        }
+      }
+    },
+
+    {
+      "id": "a1b2c3d4-0004-4000-8000-000000000004",
+      "name": "Estrai JSON da Claude",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1020, 300],
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\n// Claude returns { content: [{ type: 'text', text: '...' }] }\nconst raw = item?.content?.[0]?.text || item?.choices?.[0]?.message?.content || '';\n\nlet parsed = {};\ntry {\n  // Strip any markdown fences Claude might add\n  const clean = raw\n    .replace(/^```json\\s*/i, '')\n    .replace(/^```\\s*/i, '')\n    .replace(/```$/i, '')\n    .trim();\n  parsed = JSON.parse(clean);\n} catch(e) {\n  // Fallback: keep the raw text so we can debug\n  return [{ json: {\n    portal: 'altro',\n    tipo: 'richiesta',\n    nome_cliente: null,\n    telefono: null,\n    email_cliente: null,\n    appartamento: null,\n    messaggio: null,\n    _parse_error: raw\n  }}];\n}\n\n// Build the Trello checklist item label\nconst tipo_label = parsed.tipo === 'chiamata_persa' ? 'Chiamata Persa' : 'Richiesta';\nconst nome  = parsed.nome_cliente  || 'N/D';\nconst tel   = parsed.telefono      || 'N/D';\nconst appt  = parsed.appartamento  || 'N/D';\nconst msg   = parsed.messaggio     ? ` | \"${parsed.messaggio.slice(0, 80)}\"` : '';\n\nconst trello_item = `${nome} | Tel: ${tel} | ${appt} | ${tipo_label}${msg}`;\n\nreturn [{ json: { ...parsed, trello_item } }];"
+      }
+    },
+
+    {
+      "id": "a1b2c3d4-0005-4000-8000-000000000005",
+      "name": "Routing per Portale",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1280, 300],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "id": "rule-immo",
+                    "leftValue": "={{ $json.portal }}",
+                    "rightValue": "immobiliare",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Immobiliare"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "id": "rule-ideal",
+                    "leftValue": "={{ $json.portal }}",
+                    "rightValue": "idealista",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Idealista"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "id": "rule-casa",
+                    "leftValue": "={{ $json.portal }}",
+                    "rightValue": "casa",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Casa.it"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      }
+    },
+
+    {
+      "id": "a1b2c3d4-0006-4000-8000-000000000006",
+      "name": "Trello — Immobiliare.it",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 60],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.trello.com/1/checklists/REPLACE_CHECKLIST_ID_IMMOBILIARE/checkItems",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "key",     "value": "REPLACE_TRELLO_API_KEY" },
+            { "name": "token",   "value": "REPLACE_TRELLO_TOKEN" },
+            { "name": "name",    "value": "={{ $json.trello_item }}" },
+            { "name": "checked", "value": "false" }
+          ]
+        }
+      }
+    },
+
+    {
+      "id": "a1b2c3d4-0007-4000-8000-000000000007",
+      "name": "Trello — Idealista",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 220],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.trello.com/1/checklists/REPLACE_CHECKLIST_ID_IDEALISTA/checkItems",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "key",     "value": "REPLACE_TRELLO_API_KEY" },
+            { "name": "token",   "value": "REPLACE_TRELLO_TOKEN" },
+            { "name": "name",    "value": "={{ $json.trello_item }}" },
+            { "name": "checked", "value": "false" }
+          ]
+        }
+      }
+    },
+
+    {
+      "id": "a1b2c3d4-0008-4000-8000-000000000008",
+      "name": "Trello — Casa.it",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 380],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.trello.com/1/checklists/REPLACE_CHECKLIST_ID_CASA/checkItems",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "key",     "value": "REPLACE_TRELLO_API_KEY" },
+            { "name": "token",   "value": "REPLACE_TRELLO_TOKEN" },
+            { "name": "name",    "value": "={{ $json.trello_item }}" },
+            { "name": "checked", "value": "false" }
+          ]
+        }
+      }
+    },
+
+    {
+      "id": "a1b2c3d4-0009-4000-8000-000000000009",
+      "name": "Trello — Altro / Sconosciuto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 540],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.trello.com/1/checklists/REPLACE_CHECKLIST_ID_ALTRO/checkItems",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "key",     "value": "REPLACE_TRELLO_API_KEY" },
+            { "name": "token",   "value": "REPLACE_TRELLO_TOKEN" },
+            { "name": "name",    "value": "={{ $json.trello_item }}" },
+            { "name": "checked", "value": "false" }
+          ]
+        }
+      }
+    }
+
+  ],
+
+  "connections": {
+    "Email Trigger — seveso@tempocasa.it": {
+      "main": [[{ "node": "Prepara Testo Email", "type": "main", "index": 0 }]]
+    },
+    "Prepara Testo Email": {
+      "main": [[{ "node": "Claude — Analisi Email", "type": "main", "index": 0 }]]
+    },
+    "Claude — Analisi Email": {
+      "main": [[{ "node": "Estrai JSON da Claude", "type": "main", "index": 0 }]]
+    },
+    "Estrai JSON da Claude": {
+      "main": [[{ "node": "Routing per Portale", "type": "main", "index": 0 }]]
+    },
+    "Routing per Portale": {
+      "main": [
+        [{ "node": "Trello — Immobiliare.it",      "type": "main", "index": 0 }],
+        [{ "node": "Trello — Idealista",            "type": "main", "index": 0 }],
+        [{ "node": "Trello — Casa.it",              "type": "main", "index": 0 }],
+        [{ "node": "Trello — Altro / Sconosciuto",  "type": "main", "index": 0 }]
+      ]
+    }
+  },
+
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "tempocasa-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "tempocasa-seveso"
+  },
+  "id": "tempocasa-email-workflow-001",
+  "tags": [
+    { "name": "tempocasa" },
+    { "name": "email" },
+    { "name": "immobiliare" }
+  ],
+  "pinData": {}
+}

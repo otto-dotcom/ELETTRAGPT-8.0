@@ -1,0 +1,24 @@
+PORTAL  : immobiliare
+TYPE    : richiesta
+FROM    : notifiche@immobiliare.it
+SUBJECT : Richiesta di informazioni — Via Roma 12, Seveso (MI)
+────────────────────────────────────────────────────────────
+
+Hai ricevuto una nuova richiesta di informazioni tramite immobiliare.it
+
+Annuncio: Appartamento in vendita — Via Roma 12, Seveso (MI) — € 189.000
+Codice annuncio: 12345678
+
+Dati del richiedente:
+  Nome:     Mario Rossi
+  Telefono: 333 1234567
+  Email:    mario.rossi@gmail.com
+
+Messaggio:
+Buongiorno, sono interessato all'appartamento al piano secondo.
+Sarebbe possibile fissare una visita per sabato mattina?
+Grazie mille.
+
+---
+Rispondi direttamente a questa email per contattare l'utente.
+www.immobiliare.it

@@ -1,0 +1,24 @@
+PORTAL  : casa
+TYPE    : richiesta
+FROM    : noreply@casa.it
+SUBJECT : Hai ricevuto una richiesta per Via Libertà 8, Seveso
+────────────────────────────────────────────────────────────
+
+casa.it — Nuova richiesta di informazioni
+
+Annuncio: Quadrilocale in vendita — Via Libertà 8, Seveso (CO) — € 265.000
+ID annuncio: CSA-0001234
+
+Informazioni del richiedente:
+  Nome:     Anna Colombo
+  Tel:      339 2345678
+  Email:    anna.colombo@yahoo.it
+
+Il richiedente ha scritto:
+Sono interessata all'appartamento. Abito attualmente in affitto e
+vorrei passare all'acquisto entro l'anno. Avrei bisogno di sapere
+se l'immobile è libero subito o ci sono locatari. Grazie.
+
+---
+Gestisci le tue richieste su casa.it/agenzie
+© casa.it
